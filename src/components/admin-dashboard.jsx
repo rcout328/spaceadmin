@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react'
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -18,32 +19,12 @@ import {
   Settings,
   LogOut,
   Menu,
-  Loader2,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/contexts/AuthContext';
 
 export function AdminDashboardComponent() {
   const { currentEmail, logout, loading } = useAuth();
-
-  useEffect(() => {
-    if (!loading && currentEmail !== 'admin123@gmail.com') {
-      logout();
-    }
-  }, [currentEmail, logout, loading]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-green-800" />
-      </div>
-    );
-  }
-
-  if (currentEmail !== 'admin123@gmail.com') {
-    return <div>Access Denied</div>;
-  }
-
   const [activeTab, setActiveTab] = useState("properties")
   const [isPropertyDialogOpen, setIsPropertyDialogOpen] = useState(false)
   const [properties, setProperties] = useState([])
@@ -53,7 +34,7 @@ export function AdminDashboardComponent() {
   const [propertySearch, setPropertySearch] = useState("")
   const [inquirySearch, setInquirySearch] = useState("")
   const [currentProperty, setCurrentProperty] = useState({
-    id: null,
+    property_id: null,
     property_name: "",
     property_type: "",
     location: "",
@@ -71,9 +52,17 @@ export function AdminDashboardComponent() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   useEffect(() => {
-    fetchProperties()
-    fetchInquiries()
-  }, [])
+    if (!loading && currentEmail !== 'admin123@gmail.com') {
+      logout();
+    }
+  }, [currentEmail, logout, loading]);
+
+  useEffect(() => {
+    if (currentEmail === 'admin123@gmail.com') {
+      fetchProperties();
+      fetchInquiries();
+    }
+  }, [currentEmail]);
 
   useEffect(() => {
     setFilteredProperties(
@@ -106,7 +95,7 @@ export function AdminDashboardComponent() {
 
   const fetchInquiries = async () => {
     const { data, error } = await supabase
-      .from('inquiry')
+      .from('inquiry_rows')
       .select('*')
     if (error) {
       console.error('Error fetching inquiries:', error)
@@ -167,7 +156,7 @@ export function AdminDashboardComponent() {
 
   const resetCurrentProperty = () => {
     setCurrentProperty({
-      id: null,
+      property_id: null,
       property_name: "",
       property_type: "",
       location: "",
@@ -196,6 +185,18 @@ export function AdminDashboardComponent() {
       alert("Inquiry deleted successfully.")
       fetchInquiries()
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-green-800" />
+      </div>
+    );
+  }
+
+  if (currentEmail !== 'admin123@gmail.com') {
+    return <div>Access Denied</div>;
   }
 
   return (
