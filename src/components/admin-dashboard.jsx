@@ -22,6 +22,8 @@ import {
   Loader2
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase'
+import { AdminBestProperties } from './AdminBestProperties';
+import { AdminTop4Properties } from './AdminTop4Properties';
 
 export function AdminDashboardComponent() {
   const { currentEmail, logout, loading } = useAuth();
@@ -247,6 +249,8 @@ export function AdminDashboardComponent() {
           <TabsList className="mb-4">
             <TabsTrigger value="properties">Properties</TabsTrigger>
             <TabsTrigger value="inquiries">Inquiries</TabsTrigger>
+            <TabsTrigger value="top3">Top3 Main Properties</TabsTrigger>
+            <TabsTrigger value="top4">Top4 Properties</TabsTrigger>
           </TabsList>
           <TabsContent value="properties">
             <Card>
@@ -350,6 +354,12 @@ export function AdminDashboardComponent() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+          <TabsContent value="top3">
+            <AdminBestProperties />
+          </TabsContent>
+          <TabsContent value="top4">
+            <AdminTop4Properties />
           </TabsContent>
         </Tabs>
       </main>

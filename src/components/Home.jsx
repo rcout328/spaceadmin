@@ -18,10 +18,6 @@ export function Home() {
   if (currentEmail === 'admin123@gmail.com') {
     return <AdminDashboardComponent />;
   } else {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <AdminLogin />
-      </div>
-    );
+    return <AdminLogin />;
   }
 }
