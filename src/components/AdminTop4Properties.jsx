@@ -21,7 +21,7 @@ export function AdminTop4Properties() {
       const { data, error } = await supabase
         .from('properties')
         .select('*')
-        .eq('top3', true) // Filter to only include properties where top3 is true
+        .eq('top4', true) // Filter to only include properties where top3 is true
         .limit(3);
       
       if (error) throw error;
