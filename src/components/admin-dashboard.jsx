@@ -201,7 +201,7 @@ export function AdminDashboardComponent() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col lg:flex-row">
-      <aside className={`bg-green-800 text-white lg:w-64 ${isSidebarOpen ? 'block' : 'hidden'} lg:block`}>
+      <aside className="hidden bg-green-800 text-white lg:block lg:w-64">
         <div className="p-4">
           <div className="text-2xl font-bold mb-8">Space Oracle</div>
           <nav>
@@ -215,7 +215,7 @@ export function AdminDashboardComponent() {
             </ul>
           </nav>
         </div>
-        <div className="absolute bottom-4 left-4" onClick={logout}>
+        <div className="absolute bottom-4 left-4 hidden lg:block" onClick={logout}>
           <a href="#" className="flex items-center space-x-2 p-2 rounded-lg hover:bg-green-700">
             <LogOut className="h-5 w-5" />
             <span>Logout</span>
@@ -224,18 +224,21 @@ export function AdminDashboardComponent() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 p-4 lg:p-8">
+      <main className="flex-1 p-4 lg:p-8 overflow-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl lg:text-3xl font-bold text-green-800">Admin</h1>
           <div className="flex items-center space-x-2 lg:space-x-4">
-            <Button className="lg:hidden" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-              <Menu className="h-5 w-5" />
-            </Button>
             <Button className="bg-yellow-500 text-white hover:bg-yellow-600" onClick={() => {
               resetCurrentProperty()
               setIsPropertyDialogOpen(true)
             }}>
               <Plus className="h-5 w-5 lg:mr-2" /> <span className="hidden lg:inline">Add Property</span>
+            </Button>
+            <Button 
+              className="lg:hidden bg-red-500 text-white hover:bg-red-600" 
+              onClick={logout}
+            >
+              <LogOut className="h-5 w-5" />
             </Button>
           </div>
         </div>
@@ -353,7 +356,7 @@ export function AdminDashboardComponent() {
       
       {/* Property Dialog (Add/Edit) */}
       <Dialog open={isPropertyDialogOpen} onOpenChange={setIsPropertyDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{isEditing ? 'Edit Property' : 'Add New Property'}</DialogTitle>
             <DialogDescription>
@@ -504,10 +507,6 @@ export function AdminDashboardComponent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <Button onClick={logout} className="bg-red-500 text-white hover:bg-red-600">
-        Logout
-      </Button>
     </div>
   );
 }

@@ -9,7 +9,7 @@ export function Home() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-white">
         <Loader2 className="h-8 w-8 animate-spin text-green-800" />
       </div>
     );
@@ -18,6 +18,10 @@ export function Home() {
   if (currentEmail === 'admin123@gmail.com') {
     return <AdminDashboardComponent />;
   } else {
-    return <AdminLogin />;
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <AdminLogin />
+      </div>
+    );
   }
 }
