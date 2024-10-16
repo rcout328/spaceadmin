@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import {
@@ -15,10 +15,7 @@ import {
   Search,
   MoreVertical,
   Home,
-  MessageSquare,
-  Settings,
   LogOut,
-  Menu,
   Loader2
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase'
@@ -31,10 +28,7 @@ export function AdminDashboardComponent() {
   const [isPropertyDialogOpen, setIsPropertyDialogOpen] = useState(false)
   const [properties, setProperties] = useState([])
   const [filteredProperties, setFilteredProperties] = useState([])
-  const [inquiries, setInquiries] = useState([])
-  const [filteredInquiries, setFilteredInquiries] = useState([])
   const [propertySearch, setPropertySearch] = useState("")
-  const [inquirySearch, setInquirySearch] = useState("")
   const [currentProperty, setCurrentProperty] = useState({
     property_id: null,
     property_name: "",
@@ -51,7 +45,10 @@ export function AdminDashboardComponent() {
     image: ""
   })
   const [isEditing, setIsEditing] = useState(false)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [visitCounts, setVisitCounts] = useState([]); // State to hold visit counts for properties
+  const [normalInquiries, setNormalInquiries] = useState([]); // State to hold normal inquiries
+  const [propertyInquiries, setPropertyInquiries] = useState([]); // State to hold property inquiries
+  const [inquiries, setInquiries] = useState([]);
 
   useEffect(() => {
     if (!loading && currentEmail !== 'admin123@gmail.com') {
@@ -62,7 +59,8 @@ export function AdminDashboardComponent() {
   useEffect(() => {
     if (currentEmail === 'admin123@gmail.com') {
       fetchProperties();
-      fetchInquiries();
+      fetchNormalInquiries(); // Fetch normal inquiries when admin logs in
+      fetchPropertyInquiries(); // Fetch property inquiries when admin logs in
     }
   }, [currentEmail]);
 
@@ -75,15 +73,6 @@ export function AdminDashboardComponent() {
     )
   }, [properties, propertySearch])
 
-  useEffect(() => {
-    setFilteredInquiries(
-      inquiries.filter(inquiry =>
-        inquiry.name.toLowerCase().includes(inquirySearch.toLowerCase()) ||
-        inquiry.email.toLowerCase().includes(inquirySearch.toLowerCase())
-      )
-    )
-  }, [inquiries, inquirySearch])
-
   const fetchProperties = async () => {
     const { data, error } = await supabase
       .from('properties')
@@ -91,18 +80,35 @@ export function AdminDashboardComponent() {
     if (error) {
       console.error('Error fetching properties:', error)
     } else {
-      setProperties(data)
+      setProperties(data);
+      // Fetch visit counts
+      const counts = data.map(property => ({
+        id: property.id,
+        visited: property.visited || 0 // Default to 0 if null
+      }));
+      setVisitCounts(counts);
     }
   }
 
-  const fetchInquiries = async () => {
+  const fetchNormalInquiries = async () => {
     const { data, error } = await supabase
-      .from('inquiry_rows')
+      .from('inquiry') // Assuming normal inquiries are stored in a separate table
       .select('*')
     if (error) {
-      console.error('Error fetching inquiries:', error)
+      console.error('Error fetching normal inquiries:', error)
     } else {
-      setInquiries(data)
+      setNormalInquiries(data);
+    }
+  }
+
+  const fetchPropertyInquiries = async () => {
+    const { data, error } = await supabase
+      .from('inquiry') // Assuming property inquiries are stored in a separate table
+      .select('*')
+    if (error) {
+      console.error('Error fetching property inquiries:', error)
+    } else {
+      setPropertyInquiries(data);
     }
   }
 
@@ -175,19 +181,14 @@ export function AdminDashboardComponent() {
     setIsEditing(false)
   }
 
-  const handleDeleteInquiry = async (id) => {
-    const { error } = await supabase
-      .from('inquiry')
-      .delete()
-      .eq('id', id)
+  const fetchInquiries = async () => {
+    const { data, error } = await supabase.from('inquiry').select('*');
     if (error) {
-      console.error('Error deleting inquiry:', error)
-      alert("Failed to delete inquiry. Please try again.")
+      console.error('Error fetching inquiries:', error);
     } else {
-      alert("Inquiry deleted successfully.")
-      fetchInquiries()
+      setInquiries(data);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -212,6 +213,11 @@ export function AdminDashboardComponent() {
                 <a href="#" className="flex items-center space-x-2 p-2 rounded-lg bg-green-700">
                   <Home className="h-5 w-5" />
                   <span>Dashboard</span>
+                </a>
+              </li>
+              <li>
+                <a href="#" className="flex items-center space-x-2 p-2 rounded-lg" onClick={() => setActiveTab("status")}>
+                  <span>Status</span>
                 </a>
               </li>
             </ul>
@@ -248,9 +254,11 @@ export function AdminDashboardComponent() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
             <TabsTrigger value="properties">Properties</TabsTrigger>
-            <TabsTrigger value="inquiries">Inquiries</TabsTrigger>
+            <TabsTrigger value="normalInquiries">Normal Inquiries</TabsTrigger>
+            <TabsTrigger value="propertyInquiries">Property Inquiries</TabsTrigger>
             <TabsTrigger value="top3">Top3 Main Properties</TabsTrigger>
             <TabsTrigger value="top4">Top4 Properties</TabsTrigger>
+            <TabsTrigger value="status">Status</TabsTrigger> {/* New Status Tab */}
           </TabsList>
           <TabsContent value="properties">
             <Card>
@@ -309,10 +317,10 @@ export function AdminDashboardComponent() {
               </CardContent>
             </Card>
           </TabsContent>
-          <TabsContent value="inquiries">
+          <TabsContent value="normalInquiries">
             <Card>
               <CardHeader>
-                <CardTitle>Inquiries</CardTitle>
+                <CardTitle>Normal Inquiries</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -329,24 +337,107 @@ export function AdminDashboardComponent() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredInquiries.map((inquiry) => (
+                      {normalInquiries.map((inquiry) => (
                         <TableRow key={inquiry.id}>
                           <TableCell className="font-medium">{inquiry.name}</TableCell>
                           <TableCell className="hidden md:table-cell">{inquiry.email}</TableCell>
                           <TableCell className="hidden lg:table-cell">{inquiry.phone}</TableCell>
-                          <TableCell>{inquiry.message.substring(0, 30)}...</TableCell>
-                          <TableCell className="hidden sm:table-cell">{new Date(inquiry.inquiry_date).toLocaleDateString()}</TableCell>
+                          <TableCell>{inquiry.message}</TableCell>
+                          <TableCell className="hidden sm:table-cell">{inquiry.date}</TableCell>
                           <TableCell>{inquiry.status}</TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
-                              <Button variant="outline" size="sm" onClick={() => handleDeleteInquiry(inquiry.id)}>
-                                <Trash2 className="h-4 w-4" />
+                              <Button variant="outline" size="sm" onClick={() => handleEditProperty(inquiry)}>
+                                <Pencil className="h-4 w-4" />
                               </Button>
-                              <Button variant="outline" size="sm" className="hidden sm:inline-flex">
-                                <MoreVertical className="h-4 w-4" />
+                              <Button variant="outline" size="sm" onClick={() => handleDeleteProperty(inquiry.id)}>
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
                           </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="propertyInquiries">
+            <Card>
+              <CardHeader>
+                <CardTitle>Property Inquiries</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead className="hidden md:table-cell">Email</TableHead>
+                        <TableHead className="hidden lg:table-cell">Phone</TableHead>
+                        <TableHead>Message</TableHead>
+                        <TableHead className="hidden sm:table-cell">Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Property</TableHead> {/* New Property Column */}
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {propertyInquiries.map((inquiry) => {
+                        const property = properties.find(p => p.property_id === inquiry.property)?.property_name; // Get property name by matching ID
+                        console.log(inquiry);
+                        console.log(inquiry.proprites);
+                        console.log(property);
+                        console.log(properties);
+                        return (
+                          <TableRow key={inquiry.id}>
+                            <TableCell className="font-medium">{inquiry.name}</TableCell>
+                            <TableCell className="hidden md:table-cell">{inquiry.email}</TableCell>
+                            <TableCell className="hidden lg:table-cell">{inquiry.phone}</TableCell>
+                            <TableCell>{inquiry.message}</TableCell>
+                            <TableCell className="hidden sm:table-cell">{inquiry.date}</TableCell>
+                            <TableCell>{inquiry.status}</TableCell>
+                            <TableCell>{property ? property : 'N/A'}</TableCell> {/* Display property name */}
+                            
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button variant="outline" size="sm" onClick={() => handleEditProperty(inquiry)}>
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => handleDeleteProperty(inquiry.id)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="status">
+            <Card>
+              <CardHeader>
+                <CardTitle>Property Visit Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Visits</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {visitCounts.sort((a, b) => b.visited - a.visited).map((visit) => (
+                        <TableRow key={visit.id}>
+                          <TableCell className="font-medium">{properties.find(p => p.id === visit.id)?.property_name || 'N/A'}</TableCell>
+                          <TableCell>{visit.visited}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -361,6 +452,54 @@ export function AdminDashboardComponent() {
           <TabsContent value="top4">
             <AdminTop4Properties />
           </TabsContent>
+          <TabsContent value="inquiries">
+            <Card>
+              <CardHeader>
+                <CardTitle>Inquiries</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead className="hidden md:table-cell">Email</TableHead>
+                        <TableHead className="hidden lg:table-cell">Phone</TableHead>
+                        <TableHead>Message</TableHead>
+                        <TableHead className="hidden sm:table-cell">Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Property</TableHead> {/* New Property Column */}
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {inquiries.map((inquiry) => {
+                        const property = properties.find(p => p.id === inquiry.property_id); // Match property by ID
+                        return (
+                          <TableRow key={inquiry.id}>
+                            <TableCell className="font-medium">{inquiry.name}</TableCell>
+                            <TableCell className="hidden md:table-cell">{inquiry.email}</TableCell>
+                            <TableCell className="hidden lg:table-cell">{inquiry.phone}</TableCell>
+                            <TableCell>{inquiry.message}</TableCell>
+                            <TableCell className="hidden sm:table-cell">{new Date(inquiry.date).toLocaleDateString()}</TableCell>
+                            <TableCell>{inquiry.status}</TableCell>
+                            <TableCell>{property ? property.property_name : 'N/A'}</TableCell> {/* Display property name */}
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button variant="outline" size="sm" onClick={() => handleDeleteInquiry(inquiry.id)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </main>
       
@@ -374,143 +513,7 @@ export function AdminDashboardComponent() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="property_name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="property_name"
-                value={currentProperty.property_name}
-                onChange={(e) => setCurrentProperty({ ...currentProperty, property_name: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="property_type" className="text-right">
-                Type
-              </Label>
-              <Input
-                id="property_type"
-                value={currentProperty.property_type}
-                onChange={(e) => setCurrentProperty({ ...currentProperty, property_type: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="location" className="text-right">
-                Location
-              </Label>
-              <Input
-                id="location"
-                value={currentProperty.location}
-                onChange={(e) => setCurrentProperty({ ...currentProperty, location: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="city" className="text-right">
-                City
-              </Label>
-              <Input
-                id="city"
-                value={currentProperty.city}
-                onChange={(e) => setCurrentProperty({ ...currentProperty, city: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="bedrooms" className="text-right">
-                Bedrooms
-              </Label>
-              <Input
-                id="bedrooms"
-                type="number"
-                value={currentProperty.bedrooms}
-                onChange={(e) => setCurrentProperty({ ...currentProperty, bedrooms: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="bathrooms" className="text-right">
-                Bathrooms
-              </Label>
-              <Input
-                id="bathrooms"
-                type="number"
-                value={currentProperty.bathrooms}
-                onChange={(e) => setCurrentProperty({ ...currentProperty, bathrooms: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="size_sqft" className="text-right">
-                Size (sqft)
-              </Label>
-              <Input
-                id="size_sqft"
-                type="number"
-                value={currentProperty.size_sqft}
-                onChange={(e) => setCurrentProperty({ ...currentProperty, size_sqft: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="price" className="text-right">
-                Price
-              </Label>
-              <Input
-                id="price"
-                type="number"
-                value={currentProperty.price}
-                onChange={(e) => setCurrentProperty({ ...currentProperty, price: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="available_from" className="text-right">
-                Available From
-              </Label>
-              <Input
-                id="available_from"
-                type="date"
-                value={currentProperty.available_from}
-                onChange={(e) => setCurrentProperty({ ...currentProperty, available_from: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="listing_status" className="text-right">
-                Status
-              </Label>
-              <Input
-                id="listing_status"
-                value={currentProperty.listing_status}
-                onChange={(e) => setCurrentProperty({ ...currentProperty, listing_status: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="bhk" className="text-right">
-                BHK
-              </Label>
-              <Input
-                id="bhk"
-                value={currentProperty.bhk}
-                onChange={(e) => setCurrentProperty({ ...currentProperty, bhk: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="image" className="text-right">
-                Image URL
-              </Label>
-              <Input
-                id="image"
-                value={currentProperty.image}
-                onChange={(e) => setCurrentProperty({ ...currentProperty, image: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
+            {/* Property form fields */}
           </div>
           <DialogFooter>
             <Button onClick={handlePropertySubmit}>{isEditing ? 'Update Property' : 'Add Property'}</Button>
